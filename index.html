@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Austin's Master Dash</title>
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <header>
@@ -19,7 +19,7 @@
         <span class="legend-item green-dot">Due later</span>
       </div>
       <button id="btn-add-task" class="btn btn-primary">+ Add Task</button>
-      <button id="btn-quick-import" class="btn btn-secondary">Quick Import</button>
+      <button id="btn-quick-import" class="btn btn-secondary" onclick="document.getElementById('import-modal-overlay').classList.add('open')">Quick Import</button>
       <button id="btn-backup" class="btn btn-ghost">Export</button>
       <label class="btn btn-ghost import-label">
         Import
@@ -48,16 +48,16 @@
       <div class="drexel-hints">
         <h4>How to get your assignments</h4>
         <ul>
-          <li><strong>Step 1:</strong> Log into <a href="https://learn.dcollege.net" target="_blank">Drexel Learn</a></li>
+          <li><strong>Step 1:</strong> Log into <a href="https://learn.dcollege.net" target="_blank">Drexel Learn (Blackboard)</a></li>
           <li><strong>Step 2:</strong> Open a course</li>
-          <li><strong>Step 3:</strong> Go to Activities &rarr; Assignments (or Quizzes, Discussions)</li>
+          <li><strong>Step 3:</strong> Click <strong>Assignments</strong>, <strong>Course Content</strong>, or <strong>Gradebook</strong> in the left menu</li>
           <li><strong>Step 4:</strong> Press Cmd+A (select all), then Cmd+C (copy)</li>
           <li><strong>Step 5:</strong> Come back here and paste (Cmd+V) in the box above</li>
         </ul>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn btn-ghost" id="btn-import-cancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btn-import-parse">Import Tasks</button>
+        <button type="button" class="btn btn-ghost" id="btn-import-cancel" onclick="document.getElementById('import-modal-overlay').classList.remove('open')">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-import-parse" onclick="parseQuickImport()">Import Tasks</button>
       </div>
     </div>
   </div>
@@ -142,6 +142,6 @@
     </p>
   </footer>
 
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

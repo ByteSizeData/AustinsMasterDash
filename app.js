@@ -356,15 +356,18 @@ function setupEventListeners() {
     if (e.target === e.currentTarget) closeModal();
   });
 
-  // Escape to close modal
+  // Escape to close any modal
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      closeModal();
+      document.getElementById('import-modal-overlay').classList.remove('open');
+    }
   });
 
 }
 
 // ===== Quick Import Parser =====
-function parseQuickImport() {
+window.parseQuickImport = function() {
   const text = document.getElementById('import-paste').value.trim();
   const course = document.getElementById('import-course').value.trim();
 
