@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Austin's Master Dash</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>Austin's Master Dash</h1>
+      <span class="subtitle">Drexel Learn Autopilot</span>
+    </div>
+    <div class="header-right">
+      <div class="legend">
+        <span class="legend-item red-dot">Due &lt; 72hrs</span>
+        <span class="legend-item yellow-dot">Due &lt; 7 days</span>
+        <span class="legend-item green-dot">Due later</span>
+      </div>
+      <button id="btn-add-task" class="btn btn-primary">+ Add Task</button>
+      <button id="btn-sync" class="btn btn-secondary" title="Drag the bookmarklet below to your bookmarks bar">Sync Info</button>
+      <button id="btn-backup" class="btn btn-ghost">Export</button>
+      <label class="btn btn-ghost import-label">
+        Import
+        <input type="file" id="file-import" accept=".json" hidden>
+      </label>
+    </div>
+  </header>
+
+  <div class="sync-banner" id="sync-banner">
+    <div class="sync-content">
+      <h3>How to Auto-Sync from Drexel Learn</h3>
+      <ol>
+        <li>Drag this link to your bookmarks bar:
+          <a class="bookmarklet-link" id="bookmarklet-link" href="#">Sync Drexel Learn</a>
+        </li>
+        <li>Log into <a href="https://learn.dcollege.net" target="_blank">Drexel Learn</a></li>
+        <li>Navigate to your course's <strong>Assignments</strong> or <strong>Calendar</strong> page</li>
+        <li>Click the <strong>"Sync Drexel Learn"</strong> bookmark</li>
+        <li>Your tasks will auto-import into this dashboard!</li>
+      </ol>
+      <div class="drexel-hints">
+        <h4>Quick Navigation Tips for Drexel Learn</h4>
+        <ul>
+          <li><strong>Assignments:</strong> Course Home &rarr; Activities &rarr; Assignments</li>
+          <li><strong>Quizzes:</strong> Course Home &rarr; Activities &rarr; Quizzes</li>
+          <li><strong>Discussions:</strong> Course Home &rarr; Activities &rarr; Discussions</li>
+          <li><strong>Calendar:</strong> Click the calendar icon in the top navbar</li>
+          <li><strong>Grades:</strong> Course Home &rarr; Progress &rarr; Grades</li>
+          <li><strong>Content:</strong> Course Home &rarr; Content (left sidebar)</li>
+        </ul>
+      </div>
+      <button class="btn btn-ghost" id="btn-close-sync">Close</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="active">Active</button>
+    <button class="filter-btn" data-filter="completed">Completed</button>
+    <button class="filter-btn" data-filter="urgent">Urgent</button>
+    <select id="course-filter">
+      <option value="all">All Courses</option>
+    </select>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <main id="task-list" class="task-list"></main>
+
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">📋</div>
+    <h2>No tasks yet</h2>
+    <p>Add tasks manually or sync from Drexel Learn using the bookmarklet above.</p>
+    <button class="btn btn-primary" id="btn-add-first">+ Add Your First Task</button>
+  </div>
+
+  <!-- Add/Edit Task Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <h2 id="modal-title">Add Task</h2>
+      <form id="task-form">
+        <input type="hidden" id="task-id">
+        <div class="form-group">
+          <label for="task-name">Task Name *</label>
+          <input type="text" id="task-name" required placeholder="e.g., Week 5 Discussion Post">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="task-course">Course</label>
+            <input type="text" id="task-course" placeholder="e.g., CS 164">
+          </div>
+          <div class="form-group">
+            <label for="task-due">Due Date *</label>
+            <input type="datetime-local" id="task-due" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="task-type">Type</label>
+          <select id="task-type">
+            <option value="assignment">Assignment</option>
+            <option value="quiz">Quiz</option>
+            <option value="discussion">Discussion</option>
+            <option value="exam">Exam</option>
+            <option value="project">Project</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="task-link">Drexel Learn Link</label>
+          <input type="url" id="task-link" placeholder="https://learn.dcollege.net/...">
+        </div>
+        <div class="form-group">
+          <label for="task-hints">Navigation Hints</label>
+          <textarea id="task-hints" rows="2" placeholder="e.g., Content → Week 5 → Discussion Board"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="task-notes">Notes</label>
+          <textarea id="task-notes" rows="2" placeholder="Any extra notes..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="btn-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    <p>Austin's Master Dash &mdash; Drexel Learn Autopilot Dashboard</p>
+    <p class="footer-links">
+      <a href="https://learn.dcollege.net" target="_blank">Drexel Learn</a> &middot;
+      <a href="https://one.drexel.edu" target="_blank">DrexelOne</a> &middot;
+      <a href="https://drexel.edu/registrar/calendars/academic-calendars/" target="_blank">Academic Calendar</a>
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
