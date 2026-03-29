@@ -20,156 +20,233 @@ TASKS_FILE = Path(__file__).parent / "tasks.json"
 
 
 def login(session, username, password):
-    """Log into Drexel Learn via SSO."""
-    print("Logging into Drexel Learn...")
+    """Log into Drexel Learn via Microsoft Azure AD SSO + SAML."""
+    print("Logging into Drexel Learn via Microsoft SSO...")
 
-    # Step 1: Hit Drexel Learn to get redirected to SSO
+    # Step 1: Hit Drexel Learn — it redirects to Microsoft login
     resp = session.get(DREXEL_LEARN, allow_redirects=True, timeout=30)
+    print(f"  Redirected to: {resp.url}")
 
-    # Step 2: Find and submit the login form
-    soup = BeautifulSoup(resp.text, "html.parser")
-
-    # Look for login form - handle various SSO providers
-    form = soup.find("form", {"id": "loginForm"}) or soup.find("form", {"name": "loginForm"})
-    if not form:
-        # Try finding any form with username/password fields
-        for f in soup.find_all("form"):
-            if f.find("input", {"type": "password"}):
-                form = f
-                break
-
-    if not form:
-        # Maybe we're already on Blackboard's login page
-        form = soup.find("form", {"id": "login"}) or soup.find("form", {"action": re.compile(r"login", re.I)})
-
-    if not form:
-        # Check if we're already logged in
-        if "logout" in resp.text.lower() or "signout" in resp.text.lower():
-            print("  Already logged in!")
+    # Step 2: Microsoft login flow
+    # The URL should be login.microsoftonline.com
+    if "microsoftonline.com" in resp.url or "login.microsoft" in resp.url:
+        resp = microsoft_login(session, resp, username, password)
+        if resp is None:
+            return False
+    elif "login" in resp.url.lower():
+        # Try to find and submit the form on whatever login page we landed on
+        resp = generic_form_login(session, resp, username, password)
+        if resp is None:
+            return False
+    else:
+        # Maybe we're already logged in
+        if resp.status_code == 200:
+            print("  Appears to be already logged in!")
             return True
-        print("  Could not find login form.")
-        print(f"  Current URL: {resp.url}")
-        # Try direct Blackboard login
-        return try_direct_login(session, username, password, resp.url)
 
-    # Get form action URL
-    action = form.get("action", "")
-    if not action:
-        action = resp.url
-    elif not action.startswith("http"):
-        from urllib.parse import urljoin
-        action = urljoin(resp.url, action)
-
-    # Build form data
-    form_data = {}
-    for inp in form.find_all("input"):
-        name = inp.get("name", "")
-        value = inp.get("value", "")
-        if name:
-            form_data[name] = value
-
-    # Fill in credentials - try common field names
-    username_fields = ["username", "j_username", "user_id", "userId", "login", "email", "UserName"]
-    password_fields = ["password", "j_password", "passwd", "pass", "Password"]
-
-    for field in username_fields:
-        if field in form_data or form.find("input", {"name": field}):
-            form_data[field] = username
-            break
-    else:
-        # Try by type
-        user_input = form.find("input", {"type": "text"}) or form.find("input", {"type": "email"})
-        if user_input and user_input.get("name"):
-            form_data[user_input["name"]] = username
-
-    for field in password_fields:
-        if field in form_data or form.find("input", {"name": field}):
-            form_data[field] = password
-            break
-    else:
-        pass_input = form.find("input", {"type": "password"})
-        if pass_input and pass_input.get("name"):
-            form_data[pass_input["name"]] = password
-
-    # Submit login form
-    print(f"  Submitting login to: {action}")
-    resp = session.post(action, data=form_data, allow_redirects=True, timeout=30)
-
-    # Check for SAML response (common with university SSO)
+    # Step 3: Handle SAML response back to Blackboard
     soup = BeautifulSoup(resp.text, "html.parser")
-    saml_form = soup.find("form", {"method": "post"})
-    if saml_form:
-        saml_input = saml_form.find("input", {"name": "SAMLResponse"})
-        if saml_input:
-            print("  Processing SAML response...")
-            saml_action = saml_form.get("action", "")
-            saml_data = {}
-            for inp in saml_form.find_all("input"):
-                name = inp.get("name", "")
-                value = inp.get("value", "")
-                if name:
-                    saml_data[name] = value
-            resp = session.post(saml_action, data=saml_data, allow_redirects=True, timeout=30)
+    saml_input = soup.find("input", {"name": "SAMLResponse"})
+    if saml_input:
+        print("  Processing SAML response back to Blackboard...")
+        form = saml_input.find_parent("form")
+        if form:
+            action = form.get("action", "")
+            post_data = {}
+            for inp in form.find_all("input"):
+                n = inp.get("name", "")
+                if n:
+                    post_data[n] = inp.get("value", "")
+            resp = session.post(action, data=post_data, allow_redirects=True, timeout=30)
+            print(f"  SAML callback result: {resp.url}")
 
-    # Check if login succeeded
-    if "login" in resp.url.lower() and "error" in resp.text.lower():
-        print("  Login failed - check credentials")
-        return False
-
-    # Follow any remaining redirects to Blackboard
-    if "learn.dcollege.net" not in resp.url:
-        resp = session.get(DREXEL_LEARN, allow_redirects=True, timeout=30)
-
-    print(f"  Login result URL: {resp.url}")
-    if resp.status_code == 200:
+    # Verify login
+    if resp.status_code == 200 and "login" not in resp.url.lower():
         print("  Login successful!")
         return True
 
+    # One more try: follow any remaining redirects
+    resp = session.get(DREXEL_LEARN, allow_redirects=True, timeout=30)
+    if resp.status_code == 200 and "login" not in resp.url.lower():
+        print("  Login successful!")
+        return True
+
+    print("  Login failed.")
     return False
 
 
-def try_direct_login(session, username, password, current_url):
-    """Try direct Blackboard login as fallback."""
-    print("  Trying direct Blackboard login...")
+def microsoft_login(session, resp, username, password):
+    """Handle Microsoft Azure AD login flow."""
+    from urllib.parse import urljoin
 
-    login_urls = [
-        f"{DREXEL_LEARN}/webapps/login/",
-        f"{DREXEL_LEARN}/webapps/bb-auth-provider-shibboleth-BBLEARN/execute/shibbolethLogin",
-        f"{DREXEL_LEARN}/auth-saml/saml/login?apId=_1_1",
-    ]
+    soup = BeautifulSoup(resp.text, "html.parser")
 
-    for url in login_urls:
+    # Microsoft login has a multi-step process:
+    # 1. Enter username
+    # 2. Enter password
+
+    # Extract config from page JavaScript
+    config_match = re.search(r'\$Config\s*=\s*({.*?});', resp.text, re.DOTALL)
+    if not config_match:
+        config_match = re.search(r'"urlPost"\s*:\s*"([^"]+)"', resp.text)
+
+    # Step 1: Submit username
+    post_url = ""
+    if config_match:
         try:
-            resp = session.get(url, allow_redirects=True, timeout=15)
-            soup = BeautifulSoup(resp.text, "html.parser")
-            form = soup.find("form")
-            if form and form.find("input", {"type": "password"}):
-                action = form.get("action", resp.url)
-                if not action.startswith("http"):
-                    from urllib.parse import urljoin
-                    action = urljoin(resp.url, action)
-
-                form_data = {}
-                for inp in form.find_all("input"):
-                    name = inp.get("name", "")
-                    if name:
-                        form_data[name] = inp.get("value", "")
-
-                # Fill credentials
-                for key in form_data:
-                    if "user" in key.lower() or "login" in key.lower():
-                        form_data[key] = username
-                    elif "pass" in key.lower():
-                        form_data[key] = password
-
-                resp = session.post(action, data=form_data, allow_redirects=True, timeout=30)
-                if resp.status_code == 200 and "login" not in resp.url.lower():
-                    print("  Direct login successful!")
-                    return True
+            # Try to extract urlPost from config
+            url_match = re.search(r'"urlPost"\s*:\s*"([^"]+)"', resp.text)
+            if url_match:
+                post_url = url_match.group(1)
         except Exception:
+            pass
+
+    if not post_url:
+        # Fallback: look for form action
+        form = soup.find("form")
+        if form:
+            post_url = form.get("action", resp.url)
+        else:
+            post_url = resp.url
+
+    if not post_url.startswith("http"):
+        post_url = urljoin(resp.url, post_url)
+
+    # Extract hidden fields
+    flow_token = ""
+    ctx = ""
+    ft_match = re.search(r'"sFT"\s*:\s*"([^"]+)"', resp.text)
+    ctx_match = re.search(r'"sCtx"\s*:\s*"([^"]+)"', resp.text)
+    if ft_match:
+        flow_token = ft_match.group(1)
+    if ctx_match:
+        ctx = ctx_match.group(1)
+
+    # Submit username
+    print("  Submitting username to Microsoft...")
+    login_data = {
+        "login": username,
+        "loginfmt": username,
+        "type": "11",
+        "LoginOptions": "3",
+        "passwd": password,
+        "flowtoken": flow_token,
+        "ctx": ctx,
+        "canary": "",
+        "i13": "0",
+        "i2": "",
+        "i17": "",
+        "i18": "",
+        "i19": "0",
+    }
+
+    # Also try extracting canary
+    canary_match = re.search(r'"canary"\s*:\s*"([^"]+)"', resp.text)
+    if canary_match:
+        login_data["canary"] = canary_match.group(1)
+
+    resp = session.post(post_url, data=login_data, allow_redirects=True, timeout=30)
+    print(f"  Microsoft response URL: {resp.url}")
+
+    # Check if we need to submit password separately (some flows)
+    if "passwd" not in str(login_data) or "login.microsoftonline" in resp.url:
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Re-extract tokens for password step
+        ft_match = re.search(r'"sFT"\s*:\s*"([^"]+)"', resp.text)
+        ctx_match = re.search(r'"sCtx"\s*:\s*"([^"]+)"', resp.text)
+        url_match = re.search(r'"urlPost"\s*:\s*"([^"]+)"', resp.text)
+
+        if ft_match and url_match:
+            post_url = url_match.group(1)
+            if not post_url.startswith("http"):
+                post_url = urljoin(resp.url, post_url)
+
+            print("  Submitting password to Microsoft...")
+            pass_data = {
+                "login": username,
+                "loginfmt": username,
+                "passwd": password,
+                "type": "11",
+                "LoginOptions": "3",
+                "flowtoken": ft_match.group(1),
+                "ctx": ctx_match.group(1) if ctx_match else "",
+                "canary": "",
+                "i2": "1",
+                "i13": "0",
+                "i17": "",
+                "i18": "",
+                "i19": "0",
+            }
+            canary_match = re.search(r'"canary"\s*:\s*"([^"]+)"', resp.text)
+            if canary_match:
+                pass_data["canary"] = canary_match.group(1)
+
+            resp = session.post(post_url, data=pass_data, allow_redirects=True, timeout=30)
+            print(f"  Password response URL: {resp.url}")
+
+    # Handle "Stay signed in?" prompt
+    if "kmsi" in resp.url.lower() or "stay signed in" in resp.text.lower():
+        print("  Handling 'Stay signed in' prompt...")
+        ft_match = re.search(r'"sFT"\s*:\s*"([^"]+)"', resp.text)
+        ctx_match = re.search(r'"sCtx"\s*:\s*"([^"]+)"', resp.text)
+        url_match = re.search(r'"urlPost"\s*:\s*"([^"]+)"', resp.text)
+
+        if url_match:
+            kmsi_url = url_match.group(1)
+            if not kmsi_url.startswith("http"):
+                kmsi_url = urljoin(resp.url, kmsi_url)
+            kmsi_data = {
+                "LoginOptions": "1",
+                "type": "28",
+                "flowtoken": ft_match.group(1) if ft_match else "",
+                "ctx": ctx_match.group(1) if ctx_match else "",
+            }
+            resp = session.post(kmsi_url, data=kmsi_data, allow_redirects=True, timeout=30)
+            print(f"  KMSI response URL: {resp.url}")
+
+    # Check for errors
+    if "error" in resp.text.lower() and "microsoftonline" in resp.url:
+        err_match = re.search(r'"strServiceExceptionMessage"\s*:\s*"([^"]+)"', resp.text)
+        if err_match:
+            print(f"  Microsoft error: {err_match.group(1)}")
+        return None
+
+    return resp
+
+
+def generic_form_login(session, resp, username, password):
+    """Fallback: find and submit any login form."""
+    from urllib.parse import urljoin
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    for form in soup.find_all("form"):
+        if not form.find("input", {"type": "password"}):
             continue
 
-    return False
+        action = form.get("action", resp.url)
+        if not action.startswith("http"):
+            action = urljoin(resp.url, action)
+
+        form_data = {}
+        for inp in form.find_all("input"):
+            name = inp.get("name", "")
+            itype = inp.get("type", "")
+            if not name:
+                continue
+            if itype == "password":
+                form_data[name] = password
+            elif itype in ("text", "email"):
+                form_data[name] = username
+            else:
+                form_data[name] = inp.get("value", "")
+
+        print(f"  Submitting form to: {action}")
+        resp = session.post(action, data=form_data, allow_redirects=True, timeout=30)
+        if resp.status_code == 200:
+            return resp
+
+    return None
 
 
 def get_courses(session):
