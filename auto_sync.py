@@ -23,26 +23,50 @@ def login(session, username, password):
     """Log into Drexel Learn via Microsoft Azure AD SSO + SAML."""
     print("Logging into Drexel Learn via Microsoft SSO...")
 
-    # Step 1: Hit Drexel Learn — it redirects to Microsoft login
-    resp = session.get(DREXEL_LEARN, allow_redirects=True, timeout=30)
-    print(f"  Redirected to: {resp.url}")
+    # Step 1: Hit Blackboard's SSO login endpoint to trigger Microsoft redirect
+    sso_urls = [
+        f"{DREXEL_LEARN}/auth-saml/saml/login?apId=_1_1",
+        f"{DREXEL_LEARN}/webapps/bb-auth-provider-shibboleth-BBLEARN/execute/shibbolethLogin",
+        f"{DREXEL_LEARN}/webapps/login/?action=sso_login",
+    ]
+
+    resp = None
+    for sso_url in sso_urls:
+        try:
+            print(f"  Trying SSO endpoint: {sso_url}")
+            resp = session.get(sso_url, allow_redirects=True, timeout=30)
+            print(f"  Redirected to: {resp.url}")
+            if "microsoftonline.com" in resp.url or "login.microsoft" in resp.url:
+                break
+            if "login" in resp.url.lower() and resp.url != sso_url:
+                break
+        except Exception as e:
+            print(f"  Error: {e}")
+            continue
+
+    if resp is None:
+        # Fallback: try the main page
+        resp = session.get(DREXEL_LEARN, allow_redirects=True, timeout=30)
+        print(f"  Fallback redirected to: {resp.url}")
 
     # Step 2: Microsoft login flow
-    # The URL should be login.microsoftonline.com
     if "microsoftonline.com" in resp.url or "login.microsoft" in resp.url:
         resp = microsoft_login(session, resp, username, password)
         if resp is None:
             return False
     elif "login" in resp.url.lower():
-        # Try to find and submit the form on whatever login page we landed on
         resp = generic_form_login(session, resp, username, password)
         if resp is None:
             return False
     else:
-        # Maybe we're already logged in
-        if resp.status_code == 200:
-            print("  Appears to be already logged in!")
+        # Check if actually logged in by looking for course content
+        if "logout" in resp.text.lower() or "sign out" in resp.text.lower():
+            print("  Already logged in!")
             return True
+        print("  Not redirected to login - trying direct SSO...")
+        resp = generic_form_login(session, resp, username, password)
+        if resp is None:
+            return False
 
     # Step 3: Handle SAML response back to Blackboard
     soup = BeautifulSoup(resp.text, "html.parser")
