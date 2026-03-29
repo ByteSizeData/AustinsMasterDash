@@ -12,10 +12,13 @@ let currentCourse = 'all';
 document.addEventListener('DOMContentLoaded', () => {
   loadTasks();
   checkForImportedData();
+  checkForSyncedData();
   renderTasks();
   setupEventListeners();
   // Re-render every 60s to update urgency colors
   setInterval(renderTasks, 60000);
+  // Check for synced data every 5 minutes
+  setInterval(checkForSyncedData, 300000);
 });
 
 // ===== Storage =====
@@ -79,6 +82,40 @@ function checkForImportedData() {
   } catch (e) {
     console.error('Import error:', e);
   }
+}
+
+// ===== Check for synced data from sync.py =====
+function checkForSyncedData() {
+  fetch('tasks.json?t=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('No tasks.json'); return r.json(); })
+    .then(synced => {
+      if (!Array.isArray(synced) || synced.length === 0) return;
+      let added = 0;
+      for (const item of synced) {
+        const exists = tasks.some(t => t.name === item.name && t.course === item.course);
+        if (!exists) {
+          tasks.push({
+            id: item.id || generateId(),
+            name: item.name || 'Unnamed',
+            course: item.course || '',
+            dueDate: item.dueDate || '',
+            type: item.type || 'assignment',
+            link: item.link || '',
+            hints: item.hints || '',
+            notes: item.notes || '',
+            completed: item.completed || false,
+            createdAt: item.createdAt || new Date().toISOString()
+          });
+          added++;
+        }
+      }
+      if (added > 0) {
+        saveTasks();
+        renderTasks();
+        showToast(`Auto-synced ${added} task${added > 1 ? 's' : ''} from Drexel Learn!`, 'success');
+      }
+    })
+    .catch(() => {}); // No tasks.json yet, that's fine
 }
 
 // ===== Urgency =====
