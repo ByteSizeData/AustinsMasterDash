@@ -324,13 +324,17 @@ function setupEventListeners() {
   document.getElementById('btn-backup').addEventListener('click', exportData);
   document.getElementById('file-import').addEventListener('change', importData);
 
-  // Sync banner toggle
-  document.getElementById('btn-sync').addEventListener('click', () => {
-    document.getElementById('sync-banner').classList.toggle('open');
+  // Quick Import modal
+  document.getElementById('btn-quick-import').addEventListener('click', () => {
+    document.getElementById('import-modal-overlay').classList.add('open');
   });
-  document.getElementById('btn-close-sync').addEventListener('click', () => {
-    document.getElementById('sync-banner').classList.remove('open');
+  document.getElementById('btn-import-cancel').addEventListener('click', () => {
+    document.getElementById('import-modal-overlay').classList.remove('open');
   });
+  document.getElementById('import-modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) document.getElementById('import-modal-overlay').classList.remove('open');
+  });
+  document.getElementById('btn-import-parse').addEventListener('click', parseQuickImport);
 
   // Filters
   document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -357,84 +361,128 @@ function setupEventListeners() {
     if (e.key === 'Escape') closeModal();
   });
 
-  // Build bookmarklet href
-  buildBookmarklet();
 }
 
-// ===== Bookmarklet =====
-function buildBookmarklet() {
-  // The bookmarklet scrapes Drexel Learn (Brightspace D2L) for assignments
-  const code = `
-(function(){
-  var tasks=[];
-  var courseName='';
+// ===== Quick Import Parser =====
+function parseQuickImport() {
+  const text = document.getElementById('import-paste').value.trim();
+  const course = document.getElementById('import-course').value.trim();
 
-  /* Try to get course name from breadcrumb or header */
-  var breadcrumb=document.querySelector('.d2l-breadcrumbs, .d2l-navigation-s-header-title, [class*="course-name"]');
-  if(breadcrumb) courseName=breadcrumb.textContent.trim().split('\\n')[0].trim();
-  if(!courseName){
-    var header=document.querySelector('h1, .d2l-page-title');
-    if(header) courseName=header.textContent.trim();
-  }
-
-  /* Scrape assignment/activity rows */
-  var rows=document.querySelectorAll(
-    '.d2l-datalist-item, .d2l-le-Content tr, [class*="activity-item"], [class*="assignment"], .d2l-table tbody tr, .d2l-card, [role="listitem"]'
-  );
-  rows.forEach(function(row){
-    var nameEl=row.querySelector('a, .d2l-link, [class*="title"], th, .d2l-heading');
-    var name=nameEl?nameEl.textContent.trim():'';
-    if(!name) return;
-
-    var link='';
-    var anchor=row.querySelector('a[href]');
-    if(anchor) link=anchor.href;
-
-    var dateText='';
-    var dateEl=row.querySelector('[class*="date"], [class*="due"], time, .d2l-dates-text, td:nth-child(3), td:nth-child(2)');
-    if(dateEl) dateText=dateEl.textContent.trim();
-
-    var dueDate='';
-    if(dateText){
-      var parsed=new Date(dateText);
-      if(!isNaN(parsed.getTime())) dueDate=parsed.toISOString().slice(0,16);
-    }
-
-    tasks.push({name:name,course:courseName,dueDate:dueDate,link:link,type:'assignment',hints:'',notes:''});
-  });
-
-  /* Also try calendar events */
-  var events=document.querySelectorAll('.d2l-calendar-event, [class*="event-item"], .d2l-collapsepane');
-  events.forEach(function(ev){
-    var name=ev.textContent.trim().split('\\n')[0].trim();
-    if(!name||name.length>200) return;
-    var anchor=ev.querySelector('a[href]');
-    var link=anchor?anchor.href:'';
-    tasks.push({name:name,course:courseName,dueDate:'',link:link,type:'assignment',hints:'',notes:''});
-  });
-
-  if(tasks.length===0){
-    alert('No tasks found on this page. Try navigating to your Assignments or Calendar page in Drexel Learn.');
+  if (!text) {
+    showToast('Please paste some content from Drexel Learn.', 'error');
     return;
   }
 
-  var encoded=btoa(encodeURIComponent(JSON.stringify(tasks)));
-  var dashUrl=localStorage.getItem('austins_dash_url')||'https://bytesizedata.github.io/AustinsMasterDash/';
-  window.open(dashUrl+'#import='+encoded,'_blank');
-})();
-  `.trim();
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const found = [];
 
-  const minified = code.replace(/\s+/g, ' ').replace(/\s*([{}();,=+|&!<>])\s*/g, '$1');
-  const href = 'javascript:' + encodeURIComponent(minified);
+  // Date patterns commonly found in Brightspace/D2L
+  const datePatterns = [
+    /(\w+ \d{1,2},?\s*\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))?)/,  // Apr 5, 2026 11:59 PM
+    /(\d{1,2}\/\d{1,2}\/\d{2,4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))?)/,  // 4/5/2026 11:59 PM
+    /(\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?)/,  // 2026-04-05T23:59
+    /((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2}(?:,?\s*\d{4})?(?:\s+(?:at\s+)?\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))?)/i,  // March 30 at 11:59 PM
+  ];
 
-  const link = document.getElementById('bookmarklet-link');
-  if (link) {
-    link.href = href;
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      alert('Drag this link to your bookmarks bar — don\'t click it here! Then click it when you\'re on Drexel Learn.');
+  // Task type keywords
+  const typeMap = {
+    quiz: /quiz|exam|test|midterm|final/i,
+    discussion: /discuss|forum|post|board/i,
+    project: /project|presentation|group/i,
+    assignment: /assign|homework|hw|lab|report|paper|essay|submission/i,
+  };
+
+  // Skip lines that are just navigation/UI text
+  const skipPatterns = /^(home|content|activities|grades|calendar|progress|classlist|course\s+home|notifications|sign|log\s*(in|out)|menu|search|help|skip|navigation|footer|header|©|\d+%|no\s+items|showing|sort|filter|page\s+\d)/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Skip short lines, UI/nav text
+    if (line.length < 3 || skipPatterns.test(line)) continue;
+
+    // Look for a date in this line or nearby lines
+    let dateStr = '';
+    let parsedDate = '';
+
+    // Check current line and next 2 lines for dates
+    for (let j = i; j < Math.min(i + 3, lines.length); j++) {
+      for (const pattern of datePatterns) {
+        const match = lines[j].match(pattern);
+        if (match) {
+          dateStr = match[1];
+          const d = new Date(dateStr);
+          if (!isNaN(d.getTime())) {
+            parsedDate = d.toISOString().slice(0, 16);
+          }
+          break;
+        }
+      }
+      if (parsedDate) break;
+    }
+
+    // If this line has a date in it, it might be a due date line, not a task name
+    // Check if the line is mostly a date
+    let isDateLine = false;
+    for (const pattern of datePatterns) {
+      const match = line.match(pattern);
+      if (match && match[0].length > line.length * 0.5) {
+        isDateLine = true;
+        break;
+      }
+    }
+    if (isDateLine) continue;
+
+    // Check if line looks like a task name (has enough substance)
+    if (line.length < 5 || line.length > 200) continue;
+
+    // Detect task type
+    let type = 'assignment';
+    for (const [t, re] of Object.entries(typeMap)) {
+      if (re.test(line)) { type = t; break; }
+    }
+
+    // Avoid duplicates
+    const alreadyFound = found.some(f => f.name === line);
+    const alreadyExists = tasks.some(t => t.name === line && !t.completed);
+    if (alreadyFound || alreadyExists) continue;
+
+    // If it looks like a real task (has a date or looks like an assignment name)
+    if (parsedDate || typeMap.assignment.test(line) || typeMap.quiz.test(line) || typeMap.discussion.test(line) || typeMap.project.test(line)) {
+      found.push({
+        name: line,
+        dueDate: parsedDate,
+        type: type,
+      });
+    }
+  }
+
+  if (found.length === 0) {
+    showToast('No tasks found. Try copying more content from the page, or add tasks manually.', 'error');
+    return;
+  }
+
+  // Add found tasks
+  for (const item of found) {
+    tasks.push({
+      id: generateId(),
+      name: item.name,
+      course: course,
+      dueDate: item.dueDate,
+      type: item.type,
+      link: '',
+      hints: '',
+      notes: '',
+      completed: false,
+      createdAt: new Date().toISOString()
     });
   }
+
+  saveTasks();
+  renderTasks();
+  document.getElementById('import-modal-overlay').classList.remove('open');
+  document.getElementById('import-paste').value = '';
+  showToast(`Imported ${found.length} task${found.length > 1 ? 's' : ''} from Drexel Learn!`, 'success');
 }
 
 // ===== Toast Notifications =====

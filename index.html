@@ -19,7 +19,7 @@
         <span class="legend-item green-dot">Due later</span>
       </div>
       <button id="btn-add-task" class="btn btn-primary">+ Add Task</button>
-      <button id="btn-sync" class="btn btn-secondary" title="Drag the bookmarklet below to your bookmarks bar">Sync Info</button>
+      <button id="btn-quick-import" class="btn btn-secondary">Quick Import</button>
       <button id="btn-backup" class="btn btn-ghost">Export</button>
       <label class="btn btn-ghost import-label">
         Import
@@ -28,30 +28,37 @@
     </div>
   </header>
 
-  <div class="sync-banner" id="sync-banner">
-    <div class="sync-content">
-      <h3>How to Auto-Sync from Drexel Learn</h3>
-      <ol>
-        <li>Drag this link to your bookmarks bar:
-          <a class="bookmarklet-link" id="bookmarklet-link" href="#">Sync Drexel Learn</a>
-        </li>
-        <li>Log into <a href="https://learn.dcollege.net" target="_blank">Drexel Learn</a></li>
-        <li>Navigate to your course's <strong>Assignments</strong> or <strong>Calendar</strong> page</li>
-        <li>Click the <strong>"Sync Drexel Learn"</strong> bookmark</li>
-        <li>Your tasks will auto-import into this dashboard!</li>
-      </ol>
+  <!-- Quick Import Modal -->
+  <div class="modal-overlay" id="import-modal-overlay">
+    <div class="modal">
+      <h2>Quick Import from Drexel Learn</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+        Go to Drexel Learn, open your course, go to <strong>Assignments</strong> or <strong>Calendar</strong>,
+        select all the text on the page (Ctrl+A / Cmd+A), copy it (Ctrl+C / Cmd+C), and paste it below.
+        The dashboard will automatically find your assignments and due dates.
+      </p>
+      <div class="form-group">
+        <label for="import-course">Course Name</label>
+        <input type="text" id="import-course" placeholder="e.g., CS 164 or MATH 201">
+      </div>
+      <div class="form-group">
+        <label for="import-paste">Paste Drexel Learn page content here</label>
+        <textarea id="import-paste" rows="10" placeholder="Select all text on your Drexel Learn Assignments page, copy it, and paste here..."></textarea>
+      </div>
       <div class="drexel-hints">
-        <h4>Quick Navigation Tips for Drexel Learn</h4>
+        <h4>How to get your assignments</h4>
         <ul>
-          <li><strong>Assignments:</strong> Course Home &rarr; Activities &rarr; Assignments</li>
-          <li><strong>Quizzes:</strong> Course Home &rarr; Activities &rarr; Quizzes</li>
-          <li><strong>Discussions:</strong> Course Home &rarr; Activities &rarr; Discussions</li>
-          <li><strong>Calendar:</strong> Click the calendar icon in the top navbar</li>
-          <li><strong>Grades:</strong> Course Home &rarr; Progress &rarr; Grades</li>
-          <li><strong>Content:</strong> Course Home &rarr; Content (left sidebar)</li>
+          <li><strong>Step 1:</strong> Log into <a href="https://learn.dcollege.net" target="_blank">Drexel Learn</a></li>
+          <li><strong>Step 2:</strong> Open a course</li>
+          <li><strong>Step 3:</strong> Go to Activities &rarr; Assignments (or Quizzes, Discussions)</li>
+          <li><strong>Step 4:</strong> Press Cmd+A (select all), then Cmd+C (copy)</li>
+          <li><strong>Step 5:</strong> Come back here and paste (Cmd+V) in the box above</li>
         </ul>
       </div>
-      <button class="btn btn-ghost" id="btn-close-sync">Close</button>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" id="btn-import-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-import-parse">Import Tasks</button>
+      </div>
     </div>
   </div>
 
