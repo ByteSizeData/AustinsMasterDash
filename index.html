@@ -4,9 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Austin's Master Dash</title>
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
+  <!-- Three.js Canvas -->
+  <canvas id="orbit-canvas"></canvas>
+
+  <!-- Header Overlay -->
   <header>
     <div class="header-left">
       <h1>Austin's Master Dash</h1>
@@ -18,39 +30,52 @@
         <span class="legend-item yellow-dot">Due &lt; 7 days</span>
         <span class="legend-item green-dot">Due later</span>
       </div>
-      <button id="btn-add-task" class="btn btn-primary">+ Add Task</button>
-      <button id="btn-scrape" class="btn btn-scrape" onclick="document.getElementById('scrape-modal-overlay').classList.add('open')">Scrape Drexel Learn</button>
-      <button id="btn-backup" class="btn btn-ghost">Export</button>
-      <label class="btn btn-ghost import-label">
-        Import
-        <input type="file" id="file-import" accept=".json" hidden>
-      </label>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Task</button>
+      <button class="btn btn-scrape" onclick="document.getElementById('scrape-modal-overlay').classList.add('open')">Scrape Drexel Learn</button>
+      <button class="btn btn-ghost" onclick="exportData()">Export</button>
+      <label class="btn btn-ghost import-label">Import<input type="file" id="file-import" accept=".json" hidden></label>
     </div>
   </header>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="active">Active</button>
+    <button class="filter-btn" data-filter="completed">Completed</button>
+    <button class="filter-btn" data-filter="urgent">Urgent</button>
+    <select id="course-filter"><option value="all">All Courses</option></select>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <!-- Side Panel (opens on node click) -->
+  <div class="side-panel" id="side-panel">
+    <button class="panel-close" onclick="closePanel()">&times;</button>
+    <div id="panel-content"></div>
+  </div>
+
+  <!-- Hover Tooltip -->
+  <div class="hover-tooltip" id="hover-tooltip"></div>
 
   <!-- Scrape Modal -->
   <div class="modal-overlay" id="scrape-modal-overlay">
     <div class="modal">
       <h2>Scrape &amp; Update from Drexel Learn</h2>
-      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
-        Auto-pull all your assignments, quizzes, discussions, and due dates directly from Drexel Learn.
-      </p>
-
+      <p class="modal-desc">Auto-pull all your assignments, quizzes, discussions, and due dates directly from Drexel Learn.</p>
       <div class="scrape-steps">
         <div class="scrape-step">
           <span class="step-number">1</span>
           <div class="step-content">
             <strong>Sign into Drexel Learn</strong>
             <p>Click below to open Drexel Learn. Log in with your Drexel Connect credentials.</p>
-            <a href="https://learn.dcollege.net" target="_blank" class="btn btn-primary" style="margin-top: 0.5rem;">Open Drexel Learn</a>
+            <a href="https://learn.dcollege.net" target="_blank" class="btn btn-primary" style="margin-top:0.5rem">Open Drexel Learn</a>
           </div>
         </div>
         <div class="scrape-step">
           <span class="step-number">2</span>
           <div class="step-content">
             <strong>Run the scraper</strong>
-            <p>Once you're logged in, open <strong>Terminal</strong> on your Mac and paste this command:</p>
-            <div class="code-block" id="scrape-command">python3 ~/AustinsMasterDash/sync.py --push</div>
+            <p>Once logged in, open <strong>Terminal</strong> and paste this command:</p>
+            <div class="code-block">python3 ~/AustinsMasterDash/sync.py --push</div>
             <button class="btn btn-ghost" onclick="navigator.clipboard.writeText('python3 ~/AustinsMasterDash/sync.py --push').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Command',2000)})">Copy Command</button>
           </div>
         </div>
@@ -58,47 +83,15 @@
           <span class="step-number">3</span>
           <div class="step-content">
             <strong>Dashboard auto-updates</strong>
-            <p>The scraper grabs your Chrome cookies, pulls all assignments from every course, and pushes them here. Refresh this page to see your updated tasks.</p>
+            <p>The scraper grabs your Chrome cookies, pulls all assignments, and pushes them here. Refresh to see updates.</p>
           </div>
         </div>
       </div>
-
-      <div class="drexel-hints" style="margin-top: 1rem;">
-        <h4>What gets scraped</h4>
-        <ul>
-          <li>All <strong>assignments</strong> with due dates</li>
-          <li>All <strong>quizzes &amp; exams</strong> with due dates</li>
-          <li>All <strong>discussion boards</strong> with due dates</li>
-          <li><strong>Projects</strong> and other graded items</li>
-          <li>Direct links to each item in Drexel Learn</li>
-        </ul>
-      </div>
-
-      <div class="form-actions" style="margin-top: 1.25rem;">
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('scrape-modal-overlay').classList.remove('open')">Close</button>
-        <button type="button" class="btn btn-primary" onclick="location.reload()">Refresh Dashboard</button>
+      <div class="form-actions" style="margin-top:1.25rem">
+        <button class="btn btn-ghost" onclick="document.getElementById('scrape-modal-overlay').classList.remove('open')">Close</button>
+        <button class="btn btn-primary" onclick="location.reload()">Refresh Dashboard</button>
       </div>
     </div>
-  </div>
-
-  <div class="filters">
-    <button class="filter-btn active" data-filter="all">All</button>
-    <button class="filter-btn" data-filter="active">Active</button>
-    <button class="filter-btn" data-filter="completed">Completed</button>
-    <button class="filter-btn" data-filter="urgent">Urgent</button>
-    <select id="course-filter">
-      <option value="all">All Courses</option>
-    </select>
-    <div class="stats" id="stats"></div>
-  </div>
-
-  <main id="task-list" class="task-list"></main>
-
-  <div class="empty-state" id="empty-state">
-    <div class="empty-icon">📋</div>
-    <h2>No tasks yet</h2>
-    <p>Add tasks manually or sync from Drexel Learn using the bookmarklet above.</p>
-    <button class="btn btn-primary" id="btn-add-first">+ Add Your First Task</button>
   </div>
 
   <!-- Add/Edit Task Modal -->
@@ -114,7 +107,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="task-course">Course</label>
-            <input type="text" id="task-course" placeholder="e.g., CS 164">
+            <input type="text" id="task-course" placeholder="e.g., SYSE-682">
           </div>
           <div class="form-group">
             <label for="task-due">Due Date *</label>
@@ -138,29 +131,21 @@
         </div>
         <div class="form-group">
           <label for="task-hints">Navigation Hints</label>
-          <textarea id="task-hints" rows="2" placeholder="e.g., Content → Week 5 → Discussion Board"></textarea>
+          <textarea id="task-hints" rows="2" placeholder="e.g., Course → Assignments → Week 5"></textarea>
         </div>
         <div class="form-group">
           <label for="task-notes">Notes</label>
           <textarea id="task-notes" rows="2" placeholder="Any extra notes..."></textarea>
         </div>
         <div class="form-actions">
-          <button type="button" class="btn btn-ghost" id="btn-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save">Save Task</button>
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Task</button>
         </div>
       </form>
     </div>
   </div>
 
-  <footer>
-    <p>Austin's Master Dash &mdash; Drexel Learn Autopilot Dashboard</p>
-    <p class="footer-links">
-      <a href="https://learn.dcollege.net" target="_blank">Drexel Learn</a> &middot;
-      <a href="https://one.drexel.edu" target="_blank">DrexelOne</a> &middot;
-      <a href="https://drexel.edu/registrar/calendars/academic-calendars/" target="_blank">Academic Calendar</a>
-    </p>
-  </footer>
-
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
+  <script type="module" src="scene.js?v=7"></script>
 </body>
 </html>
