@@ -90,30 +90,49 @@ function checkForSyncedData() {
     .then(r => { if (!r.ok) throw new Error('No tasks.json'); return r.json(); })
     .then(synced => {
       if (!Array.isArray(synced) || synced.length === 0) return;
-      let added = 0;
+
+      // Check if tasks.json is newer than what we have
+      const lastSync = localStorage.getItem('austins_dash_last_sync') || '';
+      const syncTime = synced[0]?.createdAt || '';
+
+      // Merge: keep completed status from localStorage, update everything else from tasks.json
+      const completedMap = {};
+      for (const t of tasks) {
+        if (t.completed) completedMap[t.name + '|' + t.course] = true;
+      }
+
+      // Also keep any manually added tasks (ones not from Drexel scrape)
+      const manualTasks = tasks.filter(t => !t.id.startsWith('drexel_'));
+
+      // Build new task list from synced data
+      const newTasks = [];
       for (const item of synced) {
-        const exists = tasks.some(t => t.name === item.name && t.course === item.course);
-        if (!exists) {
-          tasks.push({
-            id: item.id || generateId(),
-            name: item.name || 'Unnamed',
-            course: item.course || '',
-            dueDate: item.dueDate || '',
-            type: item.type || 'assignment',
-            link: item.link || '',
-            hints: item.hints || '',
-            notes: item.notes || '',
-            completed: item.completed || false,
-            createdAt: item.createdAt || new Date().toISOString()
-          });
-          added++;
-        }
+        const key = item.name + '|' + item.course;
+        newTasks.push({
+          id: item.id || generateId(),
+          name: item.name || 'Unnamed',
+          course: item.course || '',
+          dueDate: item.dueDate || '',
+          type: item.type || 'assignment',
+          link: item.link || '',
+          hints: item.hints || '',
+          notes: item.notes || '',
+          completed: completedMap[key] || false,
+          createdAt: item.createdAt || new Date().toISOString()
+        });
       }
-      if (added > 0) {
-        saveTasks();
-        renderTasks();
-        showToast(`Auto-synced ${added} task${added > 1 ? 's' : ''} from Drexel Learn!`, 'success');
+
+      // Add back manual tasks
+      for (const mt of manualTasks) {
+        const exists = newTasks.some(t => t.name === mt.name && t.course === mt.course);
+        if (!exists) newTasks.push(mt);
       }
+
+      tasks = newTasks;
+      localStorage.setItem('austins_dash_last_sync', syncTime);
+      saveTasks();
+      renderTasks();
+      showToast(`Loaded ${synced.length} tasks from Drexel Learn!`, 'success');
     })
     .catch(() => {}); // No tasks.json yet, that's fine
 }
