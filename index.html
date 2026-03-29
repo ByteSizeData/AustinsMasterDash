@@ -4,21 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Austin's Master Dash</title>
-  <link rel="stylesheet" href="style.css?v=7">
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
-  <!-- Three.js Canvas -->
-  <canvas id="orbit-canvas"></canvas>
-
-  <!-- Header Overlay -->
   <header>
     <div class="header-left">
       <h1>Austin's Master Dash</h1>
@@ -37,6 +25,37 @@
     </div>
   </header>
 
+  <!-- Progress + Grade Bar -->
+  <div class="progress-section">
+    <div class="progress-cards">
+      <div class="progress-card">
+        <div class="progress-label">Overall Progress</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        </div>
+        <div class="progress-text" id="progress-text">0 / 0 completed</div>
+      </div>
+      <div class="progress-card grade-card" id="grade-card-682">
+        <div class="progress-label">SYSE-682</div>
+        <div class="grade-display" id="grade-682">--</div>
+        <div class="grade-sub" id="grade-682-sub">0 / 0 done</div>
+      </div>
+      <div class="progress-card grade-card" id="grade-card-685">
+        <div class="progress-label">SYSE-685</div>
+        <div class="grade-display" id="grade-685">--</div>
+        <div class="grade-sub" id="grade-685-sub">0 / 0 done</div>
+      </div>
+      <div class="progress-card stat-card">
+        <div class="stat-number urgent-count" id="urgent-count">0</div>
+        <div class="stat-label">Urgent</div>
+      </div>
+      <div class="progress-card stat-card">
+        <div class="stat-number" id="upcoming-count" style="color:var(--yellow)">0</div>
+        <div class="stat-label">This Week</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Filters -->
   <div class="filters">
     <button class="filter-btn active" data-filter="all">All</button>
@@ -47,14 +66,14 @@
     <div class="stats" id="stats"></div>
   </div>
 
-  <!-- Side Panel (opens on node click) -->
-  <div class="side-panel" id="side-panel">
-    <button class="panel-close" onclick="closePanel()">&times;</button>
-    <div id="panel-content"></div>
-  </div>
+  <!-- Task List -->
+  <main id="task-list" class="task-list"></main>
 
-  <!-- Hover Tooltip -->
-  <div class="hover-tooltip" id="hover-tooltip"></div>
+  <div class="empty-state" id="empty-state">
+    <h2>No tasks yet</h2>
+    <p>Click "Scrape Drexel Learn" to pull your assignments, or add tasks manually.</p>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Your First Task</button>
+  </div>
 
   <!-- Scrape Modal -->
   <div class="modal-overlay" id="scrape-modal-overlay">
@@ -62,30 +81,9 @@
       <h2>Scrape &amp; Update from Drexel Learn</h2>
       <p class="modal-desc">Auto-pull all your assignments, quizzes, discussions, and due dates directly from Drexel Learn.</p>
       <div class="scrape-steps">
-        <div class="scrape-step">
-          <span class="step-number">1</span>
-          <div class="step-content">
-            <strong>Sign into Drexel Learn</strong>
-            <p>Click below to open Drexel Learn. Log in with your Drexel Connect credentials.</p>
-            <a href="https://learn.dcollege.net" target="_blank" class="btn btn-primary" style="margin-top:0.5rem">Open Drexel Learn</a>
-          </div>
-        </div>
-        <div class="scrape-step">
-          <span class="step-number">2</span>
-          <div class="step-content">
-            <strong>Run the scraper</strong>
-            <p>Once logged in, open <strong>Terminal</strong> and paste this command:</p>
-            <div class="code-block">python3 ~/AustinsMasterDash/sync.py --push</div>
-            <button class="btn btn-ghost" onclick="navigator.clipboard.writeText('python3 ~/AustinsMasterDash/sync.py --push').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Command',2000)})">Copy Command</button>
-          </div>
-        </div>
-        <div class="scrape-step">
-          <span class="step-number">3</span>
-          <div class="step-content">
-            <strong>Dashboard auto-updates</strong>
-            <p>The scraper grabs your Chrome cookies, pulls all assignments, and pushes them here. Refresh to see updates.</p>
-          </div>
-        </div>
+        <div class="scrape-step"><span class="step-number">1</span><div class="step-content"><strong>Sign into Drexel Learn</strong><p>Click below to open Drexel Learn. Log in with your Drexel Connect credentials.</p><a href="https://learn.dcollege.net" target="_blank" class="btn btn-primary" style="margin-top:0.5rem">Open Drexel Learn</a></div></div>
+        <div class="scrape-step"><span class="step-number">2</span><div class="step-content"><strong>Run the scraper</strong><p>Once logged in, open <strong>Terminal</strong> and paste this command:</p><div class="code-block">python3 ~/AustinsMasterDash/sync.py --push</div><button class="btn btn-ghost" onclick="navigator.clipboard.writeText('python3 ~/AustinsMasterDash/sync.py --push').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Command',2000)})">Copy Command</button></div></div>
+        <div class="scrape-step"><span class="step-number">3</span><div class="step-content"><strong>Dashboard auto-updates</strong><p>Refresh this page to see your updated tasks.</p></div></div>
       </div>
       <div class="form-actions" style="margin-top:1.25rem">
         <button class="btn btn-ghost" onclick="document.getElementById('scrape-modal-overlay').classList.remove('open')">Close</button>
@@ -100,43 +98,15 @@
       <h2 id="modal-title">Add Task</h2>
       <form id="task-form">
         <input type="hidden" id="task-id">
-        <div class="form-group">
-          <label for="task-name">Task Name *</label>
-          <input type="text" id="task-name" required placeholder="e.g., Week 5 Discussion Post">
-        </div>
+        <div class="form-group"><label for="task-name">Task Name *</label><input type="text" id="task-name" required placeholder="e.g., Week 5 Discussion Post"></div>
         <div class="form-row">
-          <div class="form-group">
-            <label for="task-course">Course</label>
-            <input type="text" id="task-course" placeholder="e.g., SYSE-682">
-          </div>
-          <div class="form-group">
-            <label for="task-due">Due Date *</label>
-            <input type="datetime-local" id="task-due" required>
-          </div>
+          <div class="form-group"><label for="task-course">Course</label><input type="text" id="task-course" placeholder="e.g., SYSE-682"></div>
+          <div class="form-group"><label for="task-due">Due Date *</label><input type="datetime-local" id="task-due" required></div>
         </div>
-        <div class="form-group">
-          <label for="task-type">Type</label>
-          <select id="task-type">
-            <option value="assignment">Assignment</option>
-            <option value="quiz">Quiz</option>
-            <option value="discussion">Discussion</option>
-            <option value="exam">Exam</option>
-            <option value="project">Project</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="task-link">Drexel Learn Link</label>
-          <input type="url" id="task-link" placeholder="https://learn.dcollege.net/...">
-        </div>
-        <div class="form-group">
-          <label for="task-hints">Navigation Hints</label>
-          <textarea id="task-hints" rows="2" placeholder="e.g., Course → Assignments → Week 5"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="task-notes">Notes</label>
-          <textarea id="task-notes" rows="2" placeholder="Any extra notes..."></textarea>
-        </div>
+        <div class="form-group"><label for="task-type">Type</label><select id="task-type"><option value="assignment">Assignment</option><option value="quiz">Quiz</option><option value="discussion">Discussion</option><option value="exam">Exam</option><option value="project">Project</option><option value="other">Other</option></select></div>
+        <div class="form-group"><label for="task-link">Drexel Learn Link</label><input type="url" id="task-link" placeholder="https://learn.dcollege.net/..."></div>
+        <div class="form-group"><label for="task-hints">How to Find</label><textarea id="task-hints" rows="2" placeholder="e.g., Course → Assignments → Week 5"></textarea></div>
+        <div class="form-group"><label for="task-notes">Notes</label><textarea id="task-notes" rows="2" placeholder="Any extra notes..."></textarea></div>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Task</button>
@@ -145,7 +115,15 @@
     </div>
   </div>
 
-  <script src="app.js?v=7"></script>
-  <script type="module" src="scene.js?v=7"></script>
+  <footer>
+    <p>Austin's Master Dash &mdash; Drexel Learn Autopilot Dashboard</p>
+    <p class="footer-links">
+      <a href="https://learn.dcollege.net" target="_blank">Drexel Learn</a> &middot;
+      <a href="https://one.drexel.edu" target="_blank">DrexelOne</a> &middot;
+      <a href="https://drexel.edu/registrar/calendars/academic-calendars/" target="_blank">Academic Calendar</a>
+    </p>
+  </footer>
+
+  <script src="app.js?v=8"></script>
 </body>
 </html>
