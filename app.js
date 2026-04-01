@@ -21,8 +21,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== Storage =====
 function loadTasks() {
   try { tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { tasks = []; }
+  ensureDiscussionSubtasks();
 }
 function saveTasks() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+
+// Auto-add subtasks to SYSE-682 discussions (initial post + 3 replies)
+function ensureDiscussionSubtasks() {
+  tasks.forEach(t => {
+    if (t.type === 'discussion' && t.course && t.course.includes('SYSE-682') && !t.subtasks) {
+      t.subtasks = [
+        { label: 'Initial Post', done: false },
+        { label: 'Reply 1', done: false },
+        { label: 'Reply 2', done: false },
+        { label: 'Reply 3', done: false }
+      ];
+      // If task was already marked completed, mark all subtasks done
+      if (t.completed) t.subtasks.forEach(s => s.done = true);
+    }
+  });
+}
 
 // ===== Urgency =====
 function getUrgency(dueDate) {
@@ -46,10 +63,17 @@ function formatDueDate(dueDate) {
 }
 
 // ===== Progress & Grades =====
+function getTaskProgress(task) {
+  if (!task.subtasks) return { done: task.completed ? 1 : 0, total: 1 };
+  return { done: task.subtasks.filter(s => s.done).length, total: task.subtasks.length };
+}
 function updateProgressBar() {
+  // Count subtasks individually for more granular progress
+  let totalItems = 0, doneItems = 0;
+  tasks.forEach(t => { const p = getTaskProgress(t); totalItems += p.total; doneItems += p.done; });
   const total = tasks.length;
   const completed = tasks.filter(t => t.completed).length;
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const pct = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
 
   const bar = document.getElementById('progress-bar');
   const text = document.getElementById('progress-text');
@@ -137,6 +161,7 @@ function renderTasks() {
             <span class="task-due-label ${dueLabelClass}">${dueLabel}</span>
           </div>
           ${task.hints ? `<div class="task-hints-row">How to find: ${esc(task.hints)}</div>` : ''}
+          ${task.subtasks ? `<div class="subtask-list">${task.subtasks.map((s,i) => `<label class="subtask-item ${s.done ? 'subtask-done' : ''}"><input type="checkbox" ${s.done ? 'checked' : ''} onchange="toggleSubtask('${task.id}',${i})"><span>${esc(s.label)}</span></label>`).join('')}</div>` : ''}
         </div>
         <div class="task-actions">
           ${task.link ? `<a href="${esc(task.link)}" target="_blank" class="task-link-btn" title="Open in Drexel Learn">Open</a>` : ''}
@@ -159,7 +184,25 @@ function generateId() { return Date.now().toString(36) + Math.random().toString(
 
 window.toggleTask = function(id) {
   const t = tasks.find(t => t.id === id);
-  if (t) { t.completed = !t.completed; saveTasks(); renderTasks(); }
+  if (t) {
+    // If task has subtasks, toggle all subtasks too
+    if (t.subtasks) {
+      const newState = !t.completed;
+      t.completed = newState;
+      t.subtasks.forEach(s => s.done = newState);
+    } else {
+      t.completed = !t.completed;
+    }
+    saveTasks(); renderTasks();
+  }
+};
+window.toggleSubtask = function(taskId, subIndex) {
+  const t = tasks.find(t => t.id === taskId);
+  if (!t || !t.subtasks) return;
+  t.subtasks[subIndex].done = !t.subtasks[subIndex].done;
+  // Task is completed only when ALL subtasks are done
+  t.completed = t.subtasks.every(s => s.done);
+  saveTasks(); renderTasks();
 };
 window.deleteTask = function(id) {
   if (!confirm('Delete this task?')) return;
@@ -245,7 +288,7 @@ function checkForSyncedData() {
     const manual = tasks.filter(t=>!t.id.startsWith('drexel_'));
     const nt = synced.map(item=>({id:item.id||generateId(),name:item.name||'',course:item.course||'',dueDate:item.dueDate||'',type:item.type||'assignment',link:item.link||'',hints:item.hints||'',notes:item.notes||'',completed:cm[item.name+'|'+item.course]||false,createdAt:item.createdAt||new Date().toISOString()}));
     for (const mt of manual) { if (!nt.some(t=>t.name===mt.name&&t.course===mt.course)) nt.push(mt); }
-    tasks = nt; saveTasks(); renderTasks();
+    tasks = nt; ensureDiscussionSubtasks(); saveTasks(); renderTasks();
     showToast(`Loaded ${synced.length} tasks from Drexel Learn!`,'success');
   }).catch(()=>{});
 }

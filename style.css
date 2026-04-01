@@ -99,6 +99,14 @@ h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
 .task-due-label.urgent { color: var(--red); font-weight: 600; }
 .task-due-label.warning { color: var(--yellow); font-weight: 600; }
 .task-hints-row { margin-top: 0.3rem; font-size: 0.75rem; color: var(--text-muted); font-style: italic; }
+
+/* Subtasks (Discussion sub-checkboxes) */
+.subtask-list { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-top: 0.45rem; }
+.subtask-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.03); border: 1px solid var(--border); transition: all 0.15s; }
+.subtask-item:hover { border-color: var(--accent); }
+.subtask-item input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--green); }
+.subtask-item.subtask-done span { text-decoration: line-through; color: var(--green); }
+.subtask-item.subtask-done { border-color: var(--green-border); background: var(--green-bg); }
 .task-actions { display: flex; align-items: center; gap: 0.2rem; padding: 0 0.7rem; }
 .task-actions .btn { padding: 0.3rem 0.45rem; font-size: 0.78rem; }
 .task-link-btn { color: var(--accent); text-decoration: none; font-size: 0.78rem; padding: 0.3rem 0.45rem; }
