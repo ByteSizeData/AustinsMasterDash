@@ -284,9 +284,24 @@ function checkForImportedData() {
 function checkForSyncedData() {
   fetch('tasks.json?t='+Date.now()).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(synced=>{
     if (!Array.isArray(synced)||synced.length===0) return;
-    const cm = {}; for (const t of tasks) { if (t.completed) cm[t.name+'|'+t.course]=true; }
+    // Build lookup of existing task state (completed + subtasks)
+    const existing = {};
+    for (const t of tasks) {
+      existing[t.name+'|'+t.course] = { completed: t.completed, subtasks: t.subtasks || null };
+      existing[t.id] = { completed: t.completed, subtasks: t.subtasks || null };
+    }
     const manual = tasks.filter(t=>!t.id.startsWith('drexel_'));
-    const nt = synced.map(item=>({id:item.id||generateId(),name:item.name||'',course:item.course||'',dueDate:item.dueDate||'',type:item.type||'assignment',link:item.link||'',hints:item.hints||'',notes:item.notes||'',completed:cm[item.name+'|'+item.course]||false,createdAt:item.createdAt||new Date().toISOString()}));
+    const nt = synced.map(item=>{
+      const key = item.name+'|'+item.course;
+      const prev = existing[item.id] || existing[key] || {};
+      return {
+        id:item.id||generateId(),name:item.name||'',course:item.course||'',dueDate:item.dueDate||'',
+        type:item.type||'assignment',link:item.link||'',hints:item.hints||'',notes:item.notes||'',
+        completed: prev.completed||false,
+        subtasks: prev.subtasks||null,
+        createdAt:item.createdAt||new Date().toISOString()
+      };
+    });
     for (const mt of manual) { if (!nt.some(t=>t.name===mt.name&&t.course===mt.course)) nt.push(mt); }
     tasks = nt; ensureDiscussionSubtasks(); saveTasks(); renderTasks();
     showToast(`Loaded ${synced.length} tasks from Drexel Learn!`,'success');
