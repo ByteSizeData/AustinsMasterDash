@@ -25,18 +25,22 @@ function loadTasks() {
 }
 function saveTasks() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
 
-// Auto-add subtasks to SYSE-682 discussions (initial post + 3 replies)
+// Auto-add/fix subtasks to SYSE-682 discussions (initial post + 4 replies = 5 total)
 function ensureDiscussionSubtasks() {
   tasks.forEach(t => {
-    if (t.type === 'discussion' && t.course && t.course.includes('SYSE-682') && !t.subtasks) {
-      t.subtasks = [
-        { label: 'Initial Post', done: false },
-        { label: 'Reply 1', done: false },
-        { label: 'Reply 2', done: false },
-        { label: 'Reply 3', done: false }
-      ];
-      // If task was already marked completed, mark all subtasks done
-      if (t.completed) t.subtasks.forEach(s => s.done = true);
+    if (t.type === 'discussion' && t.course && t.course.includes('SYSE-682')) {
+      const needed = 5; // 1 initial + 4 replies
+      if (!t.subtasks || t.subtasks.length < needed) {
+        const oldDone = (t.subtasks || []).map(s => s.done);
+        t.subtasks = [
+          { label: 'Initial Post', done: oldDone[0] || false },
+          { label: 'Reply 1', done: oldDone[1] || false },
+          { label: 'Reply 2', done: oldDone[2] || false },
+          { label: 'Reply 3', done: oldDone[3] || false },
+          { label: 'Reply 4', done: oldDone[4] || false }
+        ];
+        if (t.completed) t.subtasks.forEach(s => s.done = true);
+      }
     }
   });
 }
