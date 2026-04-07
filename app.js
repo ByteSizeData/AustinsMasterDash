@@ -25,10 +25,10 @@ function loadTasks() {
 }
 function saveTasks() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
 
-// Auto-add/fix subtasks to SYSE-682 discussions (initial post + 4 replies = 5 total)
+// Auto-add/fix subtasks to all discussions (initial post + 4 replies = 5 total)
 function ensureDiscussionSubtasks() {
   tasks.forEach(t => {
-    if (t.type === 'discussion' && t.course && t.course.includes('SYSE-682')) {
+    if (t.type === 'discussion' && t.course && (t.course.includes('SYSE-682') || t.course.includes('SYSE-685'))) {
       const needed = 5; // 1 initial + 4 replies
       if (!t.subtasks || t.subtasks.length < needed) {
         const oldDone = (t.subtasks || []).map(s => s.done);

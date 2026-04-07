@@ -137,7 +137,29 @@
     "hints": "Course \u2192 Discussions (left sidebar) \u2192 find this discussion thread",
     "notes": "",
     "completed": false,
-    "createdAt": "2026-03-29T14:03:13.273575"
+    "createdAt": "2026-03-29T14:03:13.273575",
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ]
   },
   {
     "id": "drexel_17747677938",
@@ -207,7 +229,29 @@
     "hints": "Course \u2192 Discussions (left sidebar) \u2192 find this discussion thread",
     "notes": "",
     "completed": false,
-    "createdAt": "2026-03-29T14:03:13.273593"
+    "createdAt": "2026-03-29T14:03:13.273593",
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ]
   },
   {
     "id": "drexel_177476779312",
@@ -439,7 +483,29 @@
     "hints": "Course \u2192 Discussions (left sidebar) \u2192 find this discussion thread",
     "notes": "",
     "completed": false,
-    "createdAt": "2026-03-29T14:03:13.273649"
+    "createdAt": "2026-03-29T14:03:13.273649",
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ]
   },
   {
     "id": "drexel_177476779324",
@@ -498,5 +564,175 @@
     "notes": "",
     "completed": false,
     "createdAt": "2026-03-29T14:03:13.273662"
+  },
+  {
+    "id": "drexel_685_disc_u4",
+    "name": "Unit 4 Discussion \u2014 Class 685",
+    "course": "SYSE-685-900 - SP 25-26",
+    "dueDate": "2026-04-29T03:59",
+    "type": "discussion",
+    "link": "https://learn.dcollege.net/ultra/courses/_411652_1/outline",
+    "hints": "Course \u2192 Discussions \u2192 Unit 4. Opens ~24hrs before Monday.",
+    "notes": "Placeholder \u2014 check Drexel Learn for actual topic when available.",
+    "completed": false,
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ],
+    "createdAt": "2026-04-07T00:00:00.000Z"
+  },
+  {
+    "id": "drexel_685_disc_u5",
+    "name": "Unit 5 Discussion \u2014 Class 685",
+    "course": "SYSE-685-900 - SP 25-26",
+    "dueDate": "2026-05-06T03:59",
+    "type": "discussion",
+    "link": "https://learn.dcollege.net/ultra/courses/_411652_1/outline",
+    "hints": "Course \u2192 Discussions \u2192 Unit 5. Opens ~24hrs before Monday.",
+    "notes": "Placeholder \u2014 check Drexel Learn for actual topic when available.",
+    "completed": false,
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ],
+    "createdAt": "2026-04-07T00:00:00.000Z"
+  },
+  {
+    "id": "drexel_685_disc_u6",
+    "name": "Unit 6 Discussion \u2014 Class 685",
+    "course": "SYSE-685-900 - SP 25-26",
+    "dueDate": "2026-05-13T03:59",
+    "type": "discussion",
+    "link": "https://learn.dcollege.net/ultra/courses/_411652_1/outline",
+    "hints": "Course \u2192 Discussions \u2192 Unit 6. Opens ~24hrs before Monday.",
+    "notes": "Placeholder \u2014 check Drexel Learn for actual topic when available.",
+    "completed": false,
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ],
+    "createdAt": "2026-04-07T00:00:00.000Z"
+  },
+  {
+    "id": "drexel_685_disc_u7",
+    "name": "Unit 7 Discussion \u2014 Class 685",
+    "course": "SYSE-685-900 - SP 25-26",
+    "dueDate": "2026-05-20T03:59",
+    "type": "discussion",
+    "link": "https://learn.dcollege.net/ultra/courses/_411652_1/outline",
+    "hints": "Course \u2192 Discussions \u2192 Unit 7. Opens ~24hrs before Monday.",
+    "notes": "Placeholder \u2014 check Drexel Learn for actual topic when available.",
+    "completed": false,
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ],
+    "createdAt": "2026-04-07T00:00:00.000Z"
+  },
+  {
+    "id": "drexel_685_disc_u8",
+    "name": "Unit 8 Discussion \u2014 Class 685",
+    "course": "SYSE-685-900 - SP 25-26",
+    "dueDate": "2026-06-03T03:59",
+    "type": "discussion",
+    "link": "https://learn.dcollege.net/ultra/courses/_411652_1/outline",
+    "hints": "Course \u2192 Discussions \u2192 Unit 8. Opens ~24hrs before Monday.",
+    "notes": "Placeholder \u2014 check Drexel Learn for actual topic when available.",
+    "completed": false,
+    "subtasks": [
+      {
+        "label": "Initial Post",
+        "done": false
+      },
+      {
+        "label": "Reply 1",
+        "done": false
+      },
+      {
+        "label": "Reply 2",
+        "done": false
+      },
+      {
+        "label": "Reply 3",
+        "done": false
+      },
+      {
+        "label": "Reply 4",
+        "done": false
+      }
+    ],
+    "createdAt": "2026-04-07T00:00:00.000Z"
   }
 ]
